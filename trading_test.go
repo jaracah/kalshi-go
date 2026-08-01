@@ -129,6 +129,45 @@ func TestFixedPointHelpers(t *testing.T) {
 	}
 }
 
+// A 1-lot IOC can sync-fill fractionally (observed live 2026-07-24: a 1-lot
+// filled as 0.95 + 0.05). The price and fee must be booked off the exact
+// count — not skipped because zero wholes completed.
+func TestCreateOrderFractionalSyncFill(t *testing.T) {
+	c := newAuthedTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, `{"order_id":"o1","fill_count":"0.95","remaining_count":"0.05","average_fill_price":"0.0500","average_fee_paid":"0.010000","ts_ms":1}`)
+	})
+	res, err := c.CreateOrder(context.Background(), Order{
+		Ticker: "T", Side: SideAsk, Count: 1, PriceC: 5, ClientOrderID: "x",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.FillCount != 0 || res.FillCountFP != 0.95 {
+		t.Errorf("counts = %d/%v, want 0 wholes with 0.95 exact", res.FillCount, res.FillCountFP)
+	}
+	if res.AvgPriceC != 5 {
+		t.Errorf("AvgPriceC = %d, want 5 (a fractional fill carries a real price)", res.AvgPriceC)
+	}
+	if res.TotalFeeC != 1 { // 0.95 × $0.01 = $0.0095 → 1¢
+		t.Errorf("TotalFeeC = %d, want 1 (fee on the exact count)", res.TotalFeeC)
+	}
+}
+
+func TestCreateOrderFractionalFillUnusablePriceErrors(t *testing.T) {
+	c := newAuthedTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		// Money traded (0.18 contracts) but the price is missing: erroring
+		// beats silently reporting AvgPriceC 0 for a real fill.
+		fmt.Fprint(w, `{"order_id":"o1","fill_count":"0.18","remaining_count":"0.82","average_fill_price":"","average_fee_paid":"0","ts_ms":1}`)
+	})
+	if _, err := c.CreateOrder(context.Background(), Order{
+		Ticker: "T", Side: SideAsk, Count: 1, PriceC: 5, ClientOrderID: "x",
+	}); err == nil {
+		t.Error("fractional fill with unusable average_fill_price must error")
+	}
+}
+
 func TestCreateOrderRefusesUnusableFillPrice(t *testing.T) {
 	c := newAuthedTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)

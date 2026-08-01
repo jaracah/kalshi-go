@@ -69,9 +69,9 @@ type OrderResult struct {
 	RemainingFP float64
 	AvgPriceC   int // volume-weighted average fill price, cents (0 when no fill)
 	// TotalFeeC is the fee for the whole fill in cents, derived from the
-	// exchange's per-contract average (average_fee_paid × fill_count,
-	// rounded to the nearest cent) — the closest the V2 response gets to an
-	// exact total.
+	// exchange's per-contract average (average_fee_paid × the exact
+	// fill_count, rounded to the nearest cent) — the closest the V2
+	// response gets to an exact total.
 	TotalFeeC int
 	TSMs      int64 // matching-engine timestamp, epoch ms
 }
@@ -158,21 +158,25 @@ func (c *Client) CreateOrder(ctx context.Context, o Order) (OrderResult, error) 
 		Remaining: wholesRemaining(remainingFP), RemainingFP: remainingFP,
 		TSMs: resp.TSMs,
 	}
-	if fill > 0 {
-		// The fill price is booked into a real-money ledger: parse strictly.
-		// A lenient 0 here would record contracts at 0¢ and silently corrupt
-		// P&L and the position's cost basis.
+	if fillFP > countEpsilon {
+		// Any fill is booked into a real-money ledger: parse strictly. A
+		// lenient 0 here would record contracts at 0¢ and silently corrupt
+		// P&L and the position's cost basis. Keyed off the EXACT count, not
+		// wholes: a purely fractional sync fill (a 1-lot filling as 0.95 —
+		// observed live 2026-07-24) is still real money at a real price.
 		avg, err := strconv.ParseFloat(resp.AvgFillPrice, 64)
 		if err != nil || avg <= 0 || avg >= 1 {
-			return OrderResult{}, fmt.Errorf("kalshi: order %s filled %d but average_fill_price %q is unusable",
-				resp.OrderID, fill, resp.AvgFillPrice)
+			return OrderResult{}, fmt.Errorf("kalshi: order %s filled %s but average_fill_price %q is unusable",
+				resp.OrderID, resp.FillCount, resp.AvgFillPrice)
 		}
 		out.AvgPriceC = int(avg*100 + 0.5)
 		// Fees stay lenient BY CHOICE: an absent/garbled fee undercounts P&L
 		// by cents, while erroring would leave a real filled order unbooked
-		// over a cosmetic field. Callers that need exact fees should compute
-		// them from Kalshi's published fee schedule instead.
-		out.TotalFeeC = int(parseDollars(resp.AvgFeePaid)*float64(fill)*100 + 0.5)
+		// over a cosmetic field. Computed on the exact count the exchange
+		// charged for, not the whole-contract floor. Callers that need exact
+		// fees should compute them from Kalshi's published fee schedule
+		// instead.
+		out.TotalFeeC = int(parseDollars(resp.AvgFeePaid)*fillFP*100 + 0.5)
 	}
 	return out, nil
 }
