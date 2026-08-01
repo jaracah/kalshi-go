@@ -166,8 +166,8 @@ func (c *Client) CreateOrder(ctx context.Context, o Order) (OrderResult, error) 
 		// observed live 2026-07-24) is still real money at a real price.
 		avg, err := strconv.ParseFloat(resp.AvgFillPrice, 64)
 		if err != nil || avg <= 0 || avg >= 1 {
-			return OrderResult{}, fmt.Errorf("kalshi: order %s filled %v but average_fill_price %q is unusable",
-				resp.OrderID, fillFP, resp.AvgFillPrice)
+			return OrderResult{}, fmt.Errorf("kalshi: order %s filled %s but average_fill_price %q is unusable",
+				resp.OrderID, resp.FillCount, resp.AvgFillPrice)
 		}
 		out.AvgPriceC = int(avg*100 + 0.5)
 		// Fees stay lenient BY CHOICE: an absent/garbled fee undercounts P&L
