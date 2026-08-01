@@ -14,8 +14,8 @@ transports that system didn't need.
       code, matchable with `errors.As` (today non-2xx responses are plain
       errors with the body attached; `ErrPostOnlyCross` and
       `ErrOrderNotFound` are already typed)
-- [ ] Demo-environment documentation and example (`NewAuthedClient` already
-      accepts a base URL override)
+- [ ] Demo-environment runnable example (`DemoBaseURL` and doc coverage
+      exist; what's missing is an end-to-end example against a demo account)
 - [ ] Events, series, and exchange status/schedule endpoints
 - [ ] Tag `v0.1.0`
 

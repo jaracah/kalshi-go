@@ -62,7 +62,7 @@ automatically per the published spec.
 
 ```go
 signer, err := kalshi.NewSigner(os.Getenv("KALSHI_KEY_ID"), os.Getenv("KALSHI_PRIVATE_KEY"))
-c := kalshi.NewAuthedClient(nil, signer, "") // "" = production
+c := kalshi.NewAuthedClient(nil, signer, "") // "" = production; kalshi.DemoBaseURL = demo
 
 // Cheapest authenticated call — a good startup credentials check
 bal, err := c.Balance(ctx) // cents

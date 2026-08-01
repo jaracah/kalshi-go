@@ -16,6 +16,11 @@ import (
 // DefaultBaseURL is Kalshi's public trade-api v2 root.
 const DefaultBaseURL = "https://api.elections.kalshi.com/trade-api/v2"
 
+// DemoBaseURL is the trade-api v2 root of Kalshi's demo exchange, for use as
+// NewAuthedClient's baseURL. Demo accounts issue their own API keys;
+// production credentials do not work against demo.
+const DemoBaseURL = "https://demo-api.kalshi.co/trade-api/v2"
+
 // Client reads public market data, and — when built by NewAuthedClient —
 // places orders and reads the portfolio. The zero value is not usable.
 type Client struct {

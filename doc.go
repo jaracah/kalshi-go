@@ -45,6 +45,19 @@
 // caller resolves whether it filled or was already canceled through
 // Fills, never by assuming.
 //
+// # Demo environment
+//
+// Kalshi's demo exchange speaks the same protocol at a different host.
+// Pass DemoBaseURL as NewAuthedClient's baseURL, with a key pair
+// generated in a demo account (demo and production credentials are
+// separate):
+//
+//	c := kalshi.NewAuthedClient(nil, signer, kalshi.DemoBaseURL)
+//
+// Passing a nil signer with a base URL override yields an
+// unauthenticated, read-only client against that host — the same
+// mechanism the package's tests use to point at httptest servers.
+//
 // # Malformed data
 //
 // Fields that feed money math parse strictly: a filled order whose
