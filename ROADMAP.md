@@ -16,7 +16,8 @@ transports that system didn't need.
       `ErrOrderNotFound` are already typed)
 - [ ] Demo-environment runnable example (`DemoBaseURL` and doc coverage
       exist; what's missing is an end-to-end example against a demo account)
-- [ ] Events, series, and exchange status/schedule endpoints
+- [ ] Events, series, and exchange schedule endpoints (exchange status
+      shipped)
 - [ ] Tag `v0.1.0`
 
 ## Later

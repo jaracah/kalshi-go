@@ -324,6 +324,33 @@ func (c *Client) FetchCandlesticks(ctx context.Context, series, ticker string, s
 	return out, nil
 }
 
+// ExchangeStatus is the exchange's operational state, per GET
+// /exchange/status.
+type ExchangeStatus struct {
+	// ExchangeActive is false when the exchange is taking no state changes
+	// at all (maintenance).
+	ExchangeActive bool `json:"exchange_active"`
+	// TradingActive is true when trading is currently permitted.
+	TradingActive bool `json:"trading_active"`
+	// EstimatedResumeTime is the estimated end of a maintenance window,
+	// ISO-8601 ("" outside maintenance).
+	EstimatedResumeTime string `json:"exchange_estimated_resume_time"`
+}
+
+// FetchExchangeStatus reports whether the exchange is up and whether trading
+// is permitted (shape verified against the get-exchange-status OpenAPI docs
+// 2026-08-02). Unauthenticated and cheap, it doubles as a keepalive: polled
+// on an interval it holds the pooled TLS connection open, so a
+// latency-sensitive order placed moments later does not pay TCP/TLS setup —
+// and TradingActive is the gate to check before quoting.
+func (c *Client) FetchExchangeStatus(ctx context.Context) (ExchangeStatus, error) {
+	var es ExchangeStatus
+	if err := c.get(ctx, "/exchange/status", "exchange status", &es); err != nil {
+		return ExchangeStatus{}, err
+	}
+	return es, nil
+}
+
 // PickLive returns the soonest-closing market that is actually tradeable right
 // now: its window has opened and it is not within buffer of its close. markets
 // is assumed sorted by close_time ascending (as DiscoverActive returns them).
