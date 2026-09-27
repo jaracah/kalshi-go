@@ -72,6 +72,26 @@ func TestPickLive_NoneLive(t *testing.T) {
 	}
 }
 
+// Fixture per the get-exchange-status OpenAPI docs (verified 2026-08-02).
+func TestFetchExchangeStatus(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/exchange/status" {
+			t.Errorf("path = %q, want /exchange/status", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"exchange_active":true,"trading_active":false,"exchange_estimated_resume_time":"2026-08-02T14:00:00Z"}`)
+	}))
+	defer srv.Close()
+
+	c := NewAuthedClient(srv.Client(), nil, srv.URL)
+	st, err := c.FetchExchangeStatus(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !st.ExchangeActive || st.TradingActive || st.EstimatedResumeTime != "2026-08-02T14:00:00Z" {
+		t.Errorf("status = %+v, want active exchange, halted trading, resume time", st)
+	}
+}
+
 func TestFetchOrderbookDepth(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"orderbook_fp":{

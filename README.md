@@ -42,12 +42,18 @@ yesBid, yesAsk, err := c.FetchOrderbook(ctx, ticker)   // live top-of-book, cent
 yes, no, err := c.FetchOrderbookDepth(ctx, ticker)     // full depth
 
 trades, err := c.FetchTrades(ctx, ticker)              // complete public tape
+status, err := c.FetchExchangeStatus(ctx)              // exchange up? trading allowed?
 settled, err := c.FetchSettled(ctx, "KXBTCD", 500)   // settled history, cursor-paged
 candles, err := c.FetchCandlesticks(ctx, series, ticker, startTS, endTS, 1)
 ```
 
 A client built with `NewClient` is strictly read-only: it holds no
 credentials and never touches a trading endpoint.
+
+`FetchExchangeStatus` is unauthenticated and cheap — polling it on an
+interval doubles as a keepalive that holds the pooled TLS connection open,
+so a latency-sensitive order placed moments later doesn't pay TCP/TLS
+setup, and its `TradingActive` field is the gate to check before quoting.
 
 Note one live-vs-cached subtlety: the market **summary** endpoint
 (`FetchMarket`, `DiscoverActive`) is CloudFront-cached and its quote fields
